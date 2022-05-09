@@ -17,8 +17,8 @@ class MessageProducer {
     private val sender = MessageQueueSender("tcp://localhost:61616/ktor-4164-test")
 
     suspend fun run() {
-        sender.send(Test(1), true)
-        sender.send(Test(2), false)
+        sender.send(Test(1), useJson = true)
+        sender.send(Test(2), useJson = false)
         sender.close()
     }
 
@@ -28,7 +28,7 @@ class MessageProducer {
 }
 
 sealed interface MessageSender {
-    suspend fun send(test: Test, json: Boolean)
+    suspend fun send(test: Test, useJson: Boolean)
     fun close()
 }
 
@@ -49,13 +49,13 @@ class MessageQueueSender(private val endpoint: String) : MessageSender, Exceptio
         producer.deliveryMode = DeliveryMode.NON_PERSISTENT
     }
 
-    override suspend fun send(test: Test, json: Boolean): Unit = runBlocking {
-        val message = if (json)
+    override suspend fun send(test: Test, useJson: Boolean): Unit = runBlocking {
+        val message = if (useJson)
             session.createTextMessage(Json.encodeToString(test))
         else
             session.createObjectMessage(test)
         try {
-            log.info("Sending message $test as ${if (json) "JSON-message" else "object-message"} " +
+            log.info("Sending message $test as ${if (useJson) "JSON-message" else "object-message"} " +
                     "to endpoint $endpoint ...")
             producer.send(message)
         } catch (e: Exception) {
